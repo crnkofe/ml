@@ -1,6 +1,6 @@
 from pandas import DataFrame, read_csv, to_datetime
 import matplotlib.pyplot as plt
-from sklearn import linear_model, preprocessing
+from sklearn import linear_model, preprocessing, model_selection
 import statsmodels.api as sm
 import datetime
 import time
@@ -55,25 +55,31 @@ plt.grid(True)
 plt.show()
 """
 
-X = df[['time_year', 'time_month', 'time_day', 'time_minute']] # here we have 2 variables for multiple regression. If you just want to use one variable for simple linear regression, then use X = df['Interest_Rate'] for example.Alternatively, you may add additional variables within the brackets
+## first attempt at making a simple line
+# this is pointless as basically all meaningful features are discarded
+# but works nontheless
+X = df[['time_year', 'time_month', 'time_day', 'time_minute']]
 Y = df['Close']
 
+X_train, X_test, y_train, y_test = model_selection.train_test_split(X, Y, test_size=0.2)
+
 regr = linear_model.LinearRegression()
-regr.fit(X, Y)
+regr.fit(X_train, y_train)
+
+accuracy = regr.score(X_test, y_test)
+print("Accuracy of Linear Regression: ", accuracy)
 
 print('Intercept: \n', regr.intercept_)
 print('Coefficients: \n', regr.coef_)
-
-# prediction with sklearn
-# New_Interest_Rate = 2.75
-# New_Unemployment_Rate = 5.3
 base = datetime.datetime(2015, 1, 1)
-
 date_list = [ base + datetime.timedelta(days=x) for x in range(365*5)]
 unix_time_list = [[t.year, t.month, t.day, t.minute] for t in date_list]
 predictions = regr.predict(unix_time_list)
 print('Long term predictions:', predictions)
 
+# create a 14 day forecast feature and a model
+
+## PLOT IT!
 values = predictions
 fig, ax = plt.subplots(1)
 ax.plot(date_list, predictions, label='BTC Price Interpolation')
