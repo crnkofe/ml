@@ -69,14 +69,14 @@ Y = df['Close FC'][:-FORECAST_INTERVAL]
 
 X_train, X_test, y_train, y_test = model_selection.train_test_split(X, Y, test_size=0.2)
 
-regr = linear_model.LinearRegression()
+regr = linear_model.LinearRegression(normalize=True)
+# Note: Ridge regression seems to have a nicer fit
+# regr = linear_model.Ridge(normalize=True)
 regr.fit(X_train, y_train)
 
 accuracy = regr.score(X_test, y_test)
 print("Accuracy of Linear Regression: ", accuracy)
 
-# print('Intercept: \n', regr.intercept_)
-# print('Coefficients: \n', regr.coef_)
 base = datetime.datetime(2015, 1, 1)
 
 X_input = df.loc['2015-01-01':'2020-01-01'].drop('Close FC', 1)
@@ -89,7 +89,7 @@ print('Long term predictions:', predictions)
 values = predictions
 fig, ax = plt.subplots(1)
 
-input_dates = [dt + datetime.timedelta(days=14) for dt in to_datetime(X_input.index)]
+input_dates = [dt + datetime.timedelta(days=FORECAST_INTERVAL) for dt in to_datetime(X_input.index)]
 ax.plot(input_dates, predictions, label='BTC Price Interpolation')
 
 btc_dates = to_datetime(df.index)
