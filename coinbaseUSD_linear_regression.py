@@ -1,8 +1,9 @@
 from pandas import DataFrame, read_csv, to_datetime
 import matplotlib.pyplot as plt
-from sklearn import linear_model
+from sklearn import linear_model, preprocessing
 import statsmodels.api as sm
 import datetime
+import time
 import tarfile
 
 def dateparse (time_in_secs):
@@ -18,6 +19,14 @@ with tarfile.open(FILENAME, "r:*") as tar:
 
 # there are a lot of NaN's in price values
 df.dropna(inplace=True)
+
+print(type(to_datetime(df.index)))
+# add time columns
+df['time_year'] = to_datetime(df.index).year
+df['time_month'] = to_datetime(df.index).month
+df['time_day'] = to_datetime(df.index).day
+df['time_minute'] = to_datetime(df.index).minute
+
 print (df)
 
 """
@@ -46,18 +55,11 @@ plt.grid(True)
 plt.show()
 """
 
-
-# df = DataFrame(Stock_Market,columns=['Year','Month','Interest_Rate','Unemployment_Rate','Stock_Index_Price'])
-
-X = df.index # here we have 2 variables for multiple regression. If you just want to use one variable for simple linear regression, then use X = df['Interest_Rate'] for example.Alternatively, you may add additional variables within the brackets
+X = df[['time_year', 'time_month', 'time_day', 'time_minute']] # here we have 2 variables for multiple regression. If you just want to use one variable for simple linear regression, then use X = df['Interest_Rate'] for example.Alternatively, you may add additional variables within the brackets
 Y = df['Close']
-print("asda")
-print(X.values.reshape(1, -1))
-print("asda")
-print(Y)
-# with sklearn
+
 regr = linear_model.LinearRegression()
-regr.fit(X.values.reshape(1, -1), Y.values.reshape(1, -1))
+regr.fit(X, Y)
 
 print('Intercept: \n', regr.intercept_)
 print('Coefficients: \n', regr.coef_)
@@ -65,31 +67,21 @@ print('Coefficients: \n', regr.coef_)
 # prediction with sklearn
 # New_Interest_Rate = 2.75
 # New_Unemployment_Rate = 5.3
-base = datetime.datetime(2020, 1, 1)
-date_list = [base + datetime.timedelta(days=x) for x in range(365)]
-#Year = 2021
-#Month = 1
+base = datetime.datetime(2015, 1, 1)
 
-#print ('Predicted Stock Index Price: \n', regr.predict([[Year,Month]]))
-predictions = regr.predict(date_list)
+date_list = [ base + datetime.timedelta(days=x) for x in range(365*5)]
+unix_time_list = [[t.year, t.month, t.day, t.minute] for t in date_list]
+predictions = regr.predict(unix_time_list)
 print('Long term predictions:', predictions)
 
-"""
-names = time_pairs
 values = predictions
 fig, ax = plt.subplots(1)
-ax.plot([datetime.date(y, m, 1) for [y, m] in time_pairs], predictions, label='Stock Price')
-ax.set_ylim(ymin=0)
+ax.plot(date_list, predictions, label='BTC Price Interpolation')
+
+btc_dates = to_datetime(df.index) #df.index.values.tolist()
+close_prices = df["Close"].tolist()
+ax.plot(btc_dates, close_prices, label='BTC Actual Close Prices')
+
+ax.set_ylim(ymin=0, ymax=20000)
 ax.legend()
 plt.show()
-
-
-# with statsmodels
-X = sm.add_constant(X) # adding a constant
-
-model = sm.OLS(Y, X).fit()
-predictions = model.predict(X)
-
-print_model = model.summary()
-print(print_model)
-"""
