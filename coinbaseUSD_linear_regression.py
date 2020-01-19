@@ -20,7 +20,7 @@ with tarfile.open(FILENAME, "r:*") as tar:
 # there are a lot of NaN's in price values
 df.dropna(inplace=True)
 
-print(type(to_datetime(df.index)))
+# print(type(to_datetime(df.index)))
 # add time columns
 df['time_year'] = to_datetime(df.index).year
 df['time_month'] = to_datetime(df.index).month
@@ -58,8 +58,14 @@ plt.show()
 ## first attempt at making a simple line
 # this is pointless as basically all meaningful features are discarded
 # but works nontheless
-X = df[['time_year', 'time_month', 'time_day', 'time_minute']]
-Y = df['Close']
+
+FORECAST_INTERVAL = 14
+df = df[~df.index.duplicated()]
+df['Close FC'] = df['Close'].shift(-FORECAST_INTERVAL, freq='D')
+df.dropna(inplace=True)
+X = df.drop('Close FC', 1)
+X = X[:-FORECAST_INTERVAL]
+Y = df['Close FC'][:-FORECAST_INTERVAL]
 
 X_train, X_test, y_train, y_test = model_selection.train_test_split(X, Y, test_size=0.2)
 
@@ -69,12 +75,12 @@ regr.fit(X_train, y_train)
 accuracy = regr.score(X_test, y_test)
 print("Accuracy of Linear Regression: ", accuracy)
 
-print('Intercept: \n', regr.intercept_)
-print('Coefficients: \n', regr.coef_)
+# print('Intercept: \n', regr.intercept_)
+# print('Coefficients: \n', regr.coef_)
 base = datetime.datetime(2015, 1, 1)
-date_list = [ base + datetime.timedelta(days=x) for x in range(365*5)]
-unix_time_list = [[t.year, t.month, t.day, t.minute] for t in date_list]
-predictions = regr.predict(unix_time_list)
+
+X_input = df.loc['2015-01-01':'2020-01-01'].drop('Close FC', 1)
+predictions = regr.predict(X_input)
 print('Long term predictions:', predictions)
 
 # create a 14 day forecast feature and a model
@@ -82,9 +88,11 @@ print('Long term predictions:', predictions)
 ## PLOT IT!
 values = predictions
 fig, ax = plt.subplots(1)
-ax.plot(date_list, predictions, label='BTC Price Interpolation')
 
-btc_dates = to_datetime(df.index) #df.index.values.tolist()
+input_dates = [dt + datetime.timedelta(days=14) for dt in to_datetime(X_input.index)]
+ax.plot(input_dates, predictions, label='BTC Price Interpolation')
+
+btc_dates = to_datetime(df.index)
 close_prices = df["Close"].tolist()
 ax.plot(btc_dates, close_prices, label='BTC Actual Close Prices')
 
